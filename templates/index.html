@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>File Viewer</title>
+</head>
+<body>
+    <h1>Files in Directory: {{ files|length }}</h1>
+    <ul>
+        {% for file in files %}
+            <li>
+                <a href="/view/{{ file }}">{{ file }}</a> | 
+                <a href="/download/{{ file }}">Download</a>
+            </li>
+        {% endfor %}
+    </ul>
+    <br>
+    <p>Add new files to the 'test' directory and refresh the page to see them.</p>
+</body>
+</html>
