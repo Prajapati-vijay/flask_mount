@@ -1,19 +1,23 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>File Viewer</title>
 </head>
 <body>
-    <h1>Files in Directory: {{ files|length }}</h1>
-    <ul>
-        {% for file in files %}
-            <li>
-                <a href="./view/{{ file }}">{{ file }}</a> | 
-                <a href="./download/{{ file }}">Download</a>
-            </li>
-        {% endfor %}
-    </ul>
-    <br>
-    <p>Add new files to the 'test' directory and refresh the page to see them.</p>
+    <h1>Files in Directories</h1>
+
+    {% for directory, files in files_in_dirs.items() %}
+        <h2>{{ directory }}</h2>
+        <ul>
+            {% for file in files %}
+                <li>
+                    <a href="{{ url_for('view_file', directory=directory, filename=file) }}">{{ file }}</a> |
+                    <a href="{{ url_for('download_file', directory=directory, filename=file) }}">Download</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endfor %}
 </body>
 </html>
