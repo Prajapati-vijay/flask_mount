@@ -9,16 +9,15 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_port=1, x_for=1, x_host=1, x_
 DIRECTORY_PATH = "test"
 
 def get_all_files(directory):
-    # This function will return all files recursively
+    # This function will return all files and directories recursively
     files = []
     
-    # We will use os.scandir for more efficient directory traversal
     try:
         # Traverse directories and subdirectories
         for entry in os.scandir(directory):
-            if entry.is_file():
-                files.append(os.path.relpath(entry.path, directory))
-            elif entry.is_dir():
+            # Just append the entry path, regardless of whether it's a file or directory
+            files.append(os.path.relpath(entry.path, directory))
+            if entry.is_dir():
                 # Recurse into subdirectories
                 files.extend(get_all_files(entry.path))
     except Exception as e:
@@ -28,7 +27,7 @@ def get_all_files(directory):
 
 @app.route('/')
 def index():
-    # List all files and subdirectories in the directory
+    # List all files and directories in the directory
     try:
         files = get_all_files(DIRECTORY_PATH)
     except FileNotFoundError:
