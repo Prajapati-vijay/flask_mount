@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, send_from_directory, abort
+from flask import Flask, render_template, request
 import os
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -9,17 +9,26 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_port=1, x_for=1, x_host=1, x_
 DIRECTORY_PATH = "test"
 
 def get_all_files(directory):
-    """ Recursively get all files with relative paths """
+    # This function will return all files recursively
     files = []
-    for root, _, filenames in os.walk(directory):
-        for filename in filenames:
-            rel_path = os.path.relpath(os.path.join(root, filename), directory)
-            files.append(rel_path.replace("\\", "/"))  # Normalize for web URLs
+    
+    # We will use os.scandir for more efficient directory traversal
+    try:
+        # Traverse directories and subdirectories
+        for entry in os.scandir(directory):
+            if entry.is_file():
+                files.append(os.path.relpath(entry.path, directory))
+            elif entry.is_dir():
+                # Recurse into subdirectories
+                files.extend(get_all_files(entry.path))
+    except Exception as e:
+        print(f"Error scanning directory {directory}: {str(e)}")
+    
     return files
 
 @app.route('/')
 def index():
-    """ List all files including subdirectories """
+    # List all files and subdirectories in the directory
     try:
         files = get_all_files(DIRECTORY_PATH)
     except FileNotFoundError:
@@ -31,29 +40,18 @@ def index():
 
 @app.route('/view/<path:filename>')
 def view_file(filename):
-    """ View file content, handling subdirectories """
     try:
         file_path = os.path.join(DIRECTORY_PATH, filename)
-        if not os.path.isfile(file_path):
-            abort(404, f"File '{filename}' not found.")
-        
-        with open(file_path, 'r', encoding='utf-8') as file:
+        with open(file_path, 'r') as file:
             content = file.read()
+    except FileNotFoundError:
+        return f"File '{filename}' not found."
     except Exception as e:
         return str(e)
     
     return f"<h1>Content of {filename}</h1><pre>{content}</pre><br><a href='/'>Back to Files</a>"
 
-@app.route('/download/<path:filename>')
-def download_file(filename):
-    """ Download a file, handling subdirectories """
-    try:
-        directory = os.path.join(DIRECTORY_PATH, os.path.dirname(filename))
-        filename = os.path.basename(filename)
-        return send_from_directory(directory, filename, as_attachment=True)
-    except Exception as e:
-        return str(e)
-
 if __name__ == '__main__':
+    # Ensure the directory exists
     os.makedirs(DIRECTORY_PATH, exist_ok=True)
     app.run(debug=True)
