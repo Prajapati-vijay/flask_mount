@@ -1,56 +1,68 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, send_from_directory
 import os
-from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_port=1, x_for=1, x_host=1, x_prefix=1)
 
-# Directory to monitor
-DIRECTORY_PATH = "test"
+# Base directories
+DIRECTORIES = ['test', 'test1', 'test2']
 
+# Helper function to get all files in a directory
 def get_all_files(directory):
-    # This function will return all files and directories recursively
     files = []
-    
     try:
-        # Traverse directories and subdirectories
+        # List all files in the directory
         for entry in os.scandir(directory):
-            # Just append the entry path, regardless of whether it's a file or directory
-            files.append(os.path.relpath(entry.path, directory))
-            if entry.is_dir():
-                # Recurse into subdirectories
-                files.extend(get_all_files(entry.path))
+            if entry.is_file():
+                files.append(entry.name)
+    except FileNotFoundError:
+        print(f"Directory '{directory}' not found.")
     except Exception as e:
-        print(f"Error scanning directory {directory}: {str(e)}")
-    
+        print(f"Error in directory '{directory}': {e}")
     return files
 
 @app.route('/')
 def index():
-    # List all files and directories in the directory
-    try:
-        files = get_all_files(DIRECTORY_PATH)
-    except FileNotFoundError:
-        return f"Directory '{DIRECTORY_PATH}' not found."
-    except Exception as e:
-        return str(e)
+    files_in_dirs = {}
+    for directory in DIRECTORIES:
+        files_in_dirs[directory] = get_all_files(directory)
     
-    return render_template('index.html', files=files)
+    return render_template('index.html', files_in_dirs=files_in_dirs)
 
-@app.route('/view/<path:filename>')
-def view_file(filename):
+@app.route('/view/<directory>/<filename>')
+def view_file(directory, filename):
+    # Ensure directory exists
+    if directory not in DIRECTORIES:
+        return f"Directory '{directory}' not found."
+
+    file_path = os.path.join(directory, filename)
+    
+    # Check if file exists
+    if not os.path.isfile(file_path):
+        return f"File '{filename}' not found in '{directory}'."
+    
+    # Read the content of the file
     try:
-        file_path = os.path.join(DIRECTORY_PATH, filename)
         with open(file_path, 'r') as file:
             content = file.read()
-    except FileNotFoundError:
-        return f"File '{filename}' not found."
     except Exception as e:
-        return str(e)
+        return f"Error reading file '{filename}': {e}"
     
-    return f"<h1>Content of {filename}</h1><pre>{content}</pre><br><a href='/'>Back to Files</a>"
+    return f"<h1>Content of {filename} in {directory}</h1><pre>{content}</pre><br><a href='/'>Back to Files</a>"
+
+@app.route('/download/<directory>/<filename>')
+def download_file(directory, filename):
+    # Ensure directory exists
+    if directory not in DIRECTORIES:
+        return f"Directory '{directory}' not found."
+    
+    try:
+        return send_from_directory(directory, filename, as_attachment=True)
+    except Exception as e:
+        return f"Error downloading file '{filename}': {e}"
 
 if __name__ == '__main__':
-    # Ensure the directory exists
-    os.makedirs(DIRECTORY_PATH, exist_ok=True)
+    # Ensure the directories exist
+    for directory in DIRECTORIES:
+        os.makedirs(directory, exist_ok=True)
+    
     app.run(debug=True)
