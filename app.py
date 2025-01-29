@@ -6,14 +6,15 @@ app = Flask(__name__)
 # Base directories
 DIRECTORIES = ['test', 'test1', 'test2']
 
-# Helper function to get all files in a directory
+# Helper function to get all files in a directory, including subdirectories
 def get_all_files(directory):
     files = []
     try:
-        # List all files in the directory
-        for entry in os.scandir(directory):
-            if entry.is_file():
-                files.append(entry.name)
+        # Traverse the directory and its subdirectories
+        for root, dirs, filenames in os.walk(directory):
+            for filename in filenames:
+                # Add the full path to the file in the directory structure
+                files.append(os.path.relpath(os.path.join(root, filename), start=directory))
     except FileNotFoundError:
         print(f"Directory '{directory}' not found.")
     except Exception as e:
