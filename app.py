@@ -13,7 +13,7 @@ def get_all_files(directory):
         # Traverse the directory and its subdirectories
         for root, dirs, filenames in os.walk(directory):
             for filename in filenames:
-                # Add the full path to the file in the directory structure
+                # Add the full path relative to the root directory
                 files.append(os.path.relpath(os.path.join(root, filename), start=directory))
     except FileNotFoundError:
         print(f"Directory '{directory}' not found.")
